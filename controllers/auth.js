@@ -1,24 +1,34 @@
 const { StatusCodes } = require("http-status-codes");
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const { BadRequestError, UnauthenticatedError } = require("../errors");
 
 const register = async (req, res) => {
-  const { name, email, password } = req.body;
-  //   const salt = await bcrypt.genSalt(10);
-  //   const hashedPassword = await bcrypt.hash(password, salt);
-  //   const tempUser = { name, email, password: hashedPassword };
-
   const user = await User.create({ ...req.body });
-  const token = jwt.sign({ userID: user._id, name: user.name }, "jwtSecret", {
-    expiresIn: "30",
-  });
-  res
-    .status(StatusCodes.CREATED)
-    .json({ user: { name: user.getName() }, token });
+  const token = user.createJWT();
+  res.status(StatusCodes.CREATED).json({ user, token });
 };
 
 const Login = async (req, res) => {
-  res.send("Login");
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    throw new BadRequestError("Please provide an email and a Password");
+  }
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    throw new UnauthenticatedError("invalid Email");
+  }
+
+  const isPasswordCorrect = await user.comparePassword(password);
+
+  if (!isPasswordCorrect) {
+    throw new UnauthenticatedError("invalid Password");
+  }
+
+  const token = user.createJWT();
+  res.status(StatusCodes.OK).json({ user, token });
 };
 
 module.exports = { register, Login };
