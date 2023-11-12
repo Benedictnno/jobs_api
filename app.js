@@ -17,7 +17,15 @@ const cors = require("cors");
 const xss = require("xss-clean");
 const rateLimiter = require("express-rate-limit");
 
-app.set('trust proxy',1)
+// Swagger
+
+const swaggerUI = require("swagger-ui-express");
+const YAML = require("yamljs");
+const swaggerDocument = YAML.load("./swagger.yaml");
+
+app.use("/api-docs", swaggerUI.serve, swaggerUI.setup(swaggerDocument));
+
+app.set("trust proxy", 1);
 app.use(
   rateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -26,14 +34,14 @@ app.use(
 );
 app.use(express.json());
 // extra packages
-app.use(helmet())
-app.use(cors())
-app.use(xss())
+app.use(helmet());
+app.use(cors());
+app.use(xss());
 
 // routes
-app.get('/',(req,res)=>{
-  res.send('Hey it works')
-})
+app.get("/", (req, res) => {
+  res.send("<H1>jobs Api</H1> <a href='/api-docs'>docs</a>");
+});
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/jobs", authenticateUser, jobsRouter);
 app.use(notFoundMiddleware);
@@ -43,7 +51,7 @@ const port = process.env.PORT || 3000;
 
 const start = async () => {
   try {
-    connectDB(process.env.MONGO_URI);
+    await connectDB(process.env.MONGO_URI);
     app.listen(port, () =>
       console.log(`Server is listening on port ${port}...`)
     );
